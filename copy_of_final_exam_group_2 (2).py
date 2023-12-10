@@ -7,128 +7,169 @@ Original file is located at
     https://colab.research.google.com/drive/1gO2dOgFageGugKDym7kuhFHj9SMPKgPR
 """
 
-import streamlit as st
-import tensorflow as tf
+
 
 from google.colab import drive
 drive.mount('/content/drive')
 
-import gradio as gr
-
 import os
+
+path = '../input/grocery/GroceryStoreDataset-master/dataset/train/'
+
+file_list = []
+
+for root, dirs, files in os.walk(path):
+#     print('Root : ', root)
+#     print('Dirs : ', dirs)
+#     print('Files : ', files)
+    for file in files:
+        file_list.append(os.path.join(root, file))
+
+
+# print(file_list)
+print(len(file_list))
+
+path = '/content/drive/MyDrive/CPE 019 Final Exam/ItemPurchase/GroceryStoreDataset-master/dataset/train/Fruit/Apple'
+
+folder_list = []
+
+for root, dirs, files in os.walk(path):
+#     print('Root : ', root)
+#     print('Dirs : ', dirs)
+#     print('Files : ', files)
+
+    if len(dirs) > 0:
+        folder_list.append(dirs)
+
+
+print(folder_list)
+print(len(folder_list))
+
+# Commented out IPython magic to ensure Python compatibility.
 import numpy as np
+import pandas as pd
+
 import matplotlib.pyplot as plt
-from PIL import Image
-from keras.models import Sequential
-from keras.layers import Dense, Flatten, Dropout
-from keras.callbacks import ModelCheckpoint
-from keras.preprocessing.image import ImageDataGenerator
-from keras.optimizers import Adam
-from sklearn.metrics import classification_report
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelBinarizer
-from tensorflow.keras.models import load_model
-
-data = '/content/drive/MyDrive/CPE 019 Final Exam/Fallimages'
-
-
-img_size = (224, 224)
-batch_size = 32
-
-datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
-train_generator = datagen.flow_from_directory(data, target_size=img_size, batch_size=batch_size, subset='training')
-val_generator = datagen.flow_from_directory(data, target_size=img_size, batch_size=batch_size, subset='validation')
-
-lb = LabelBinarizer()
-lb.fit(train_generator.classes)
-num_classes = train_generator.num_classes
-
-img_size = (224, 224)
-batch_size = 32
-
-datagen = ImageDataGenerator(
-    rescale=1./255,
-    validation_split=0.2,
-    rotation_range=20,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    shear_range=0.1,
-    zoom_range=0.1,
-    horizontal_flip=True,
-    vertical_flip=True)
-train_generator = datagen.flow_from_directory(
-    data,
-    target_size=img_size,
-    batch_size=batch_size,
-    subset='training')
-val_generator = datagen.flow_from_directory(
-    data,
-    target_size=img_size,
-    batch_size=batch_size,
-    subset='validation')
-
-num_epochs = 50
-
-learning_rate = 0.01
-
-model = Sequential()
-model.add(Flatten(input_shape=train_generator.image_shape))
-model.add(Dense(512, activation='relu'))
-model.add(Dropout(0.8))
-model.add(Dense(num_classes, activation='softmax'))
-
-optimizer = Adam(lr=learning_rate)
-model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-
-model_path = '/content/drive/MyDrive/CPE 019 Final Exam/Copy of best_model.h5'
-
-checkpoint = ModelCheckpoint(model_path, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
-
-history = model.fit(train_generator, epochs=num_epochs, validation_data=val_generator, callbacks=[checkpoint])
-
-model = load_model(model_path)
-
-data = '/content/drive/MyDrive/CPE 019 Final Exam/fall_dataset'
-
-
-img_size = (224, 224)
-batch_size = 32
-
-datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
-train_generator = datagen.flow_from_directory(data, target_size=img_size, batch_size=batch_size, subset='training')
-val_generator = datagen.flow_from_directory(data, target_size=img_size, batch_size=batch_size, subset='validation')
-
-lb = LabelBinarizer()
-lb.fit(train_generator.classes)
-num_classes = train_generator.num_classes
-
-@st.cache(allow_output_mutation=True)
-def model_path():
-  model=tf.keras.models.load_model('/content/drive/MyDrive/CPE 019 Final Exam/Copy of best_model.h5')
-  return model
-st.write("""
-# Fall Detection System"""
-)
-file=st.file_uploader("Choose a posture photo from computer",type=["jpg","png"])
+# %matplotlib inline
 
 import cv2
-from PIL import Image,ImageOps
-import numpy as np
-def import_and_predict(image_data,model):
-    size=(64,64)
-    image=ImageOps.fit(image_data,size,Image.ANTIALIAS)
-    img=np.asarray(image)
-    img_reshape=img[np.newaxis,...]
-    prediction=model.predict(img_reshape)
-    return prediction
-if file is None:
-    st.text("Please upload an image file")
-else:
-    image=Image.open(file)
-    st.image(image,use_column_width=True)
-    prediction=import_and_predict(image,model)
-    class_names=['Normal', 'Fall Warning', 'Fall']
-    predicted_class = class_names[np.argmax(predictions)]
-    probability = np.max(predictions)
-    print(f'Predicted class: {predicted_class}')
-    print(f'Probability: {probability}')
+import glob # to find files recursively
+
+import keras
+import tensorflow as tf
+
+from tensorflow.keras.preprocessing import image_dataset_from_directory
+
+train_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
+    rescale = 1./255., # Rescaling
+    rotation_range = 40, # for augmentation
+    width_shift_range = 0.2,
+    height_shift_range = 0.2,
+    shear_range = 0.2,
+    zoom_range = 0.2,
+    horizontal_flip = True
+)
+
+train_path = '/content/drive/MyDrive/CPE 019 Final Exam/ItemPurchase/GroceryStoreDataset-master/dataset/train'
+image_size = (224, 224)
+batch_size = 32
+
+train_generator = train_datagen.flow_from_directory(
+    train_path,
+    batch_size = batch_size,
+    class_mode = 'categorical',
+    target_size = image_size
+)
+
+train_generator
+
+train_generator[1]
+
+train_generator[0][0][0]
+
+def plotImages(images_arr):
+    fig, axes = plt.subplots(1, 5, figsize=(20,20))
+    axes = axes.flatten()
+    for img, ax in zip( images_arr, axes):
+        ax.imshow(img)
+    plt.tight_layout()
+    plt.show()
+
+
+augmented_images = [train_generator[0][0][0] for i in range(10)]
+plotImages(augmented_images)
+
+labels = (train_generator.class_indices)
+labels
+
+labels = dict((v,k) for k,v in labels.items())
+labels
+
+no_classes = len(labels)
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten, Conv2D
+from tensorflow.keras.losses import sparse_categorical_crossentropy
+from tensorflow.keras.optimizers import Adam
+
+# Create the model
+model = Sequential()
+model.add(Conv2D(16, kernel_size=(5, 5), activation='relu', input_shape=(224, 224, 3)))
+model.add(Conv2D(32, kernel_size=(5, 5), activation='relu'))
+model.add(Conv2D(64, kernel_size=(5, 5), activation='relu'))
+model.add(Conv2D(128, kernel_size=(5, 5), activation='relu'))
+model.add(Flatten())
+model.add(Dense(16, activation='relu'))
+model.add(Dense(no_classes, activation='softmax'))
+
+# Display a model summary
+model.summary()
+
+# Compile the model
+model.compile(loss='categorical_crossentropy',
+              optimizer=Adam(),
+              metrics=['accuracy']
+             )
+
+# Start training
+model.fit(
+        train_generator,
+        epochs = 10,
+        shuffle = False
+)
+
+test_datagen = tf.keras.preprocessing.image.ImageDataGenerator()
+
+test_path = '/content/drive/MyDrive/CPE 019 Final Exam/ItemPurchase/GroceryStoreDataset-master/dataset/test'
+
+test_generator = test_datagen.flow_from_directory(
+    directory = test_path,
+    batch_size = batch_size,
+    class_mode = 'categorical',
+    target_size = image_size,
+    shuffle = False,
+    seed = 42
+)
+
+pred = model.predict_generator(
+    test_generator,
+    verbose=1
+)
+
+predicted_class_indices=np.argmax(pred,axis=1)
+
+predictions = [labels[k] for k in predicted_class_indices]
+
+predictions
+
+augmented_images = [test_generator[0][0][0] for i in range(10)]
+plotImages(augmented_images)
+
+filenames = test_generator.filenames
+results = pd.DataFrame({"Filename":filenames,
+                      "Predictions":predictions})
+results.to_csv("results.csv",index=False)
+
+results.head()
+
+results.tail()
